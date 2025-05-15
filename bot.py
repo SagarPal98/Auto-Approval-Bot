@@ -9,7 +9,22 @@ from pyrogram.errors.exceptions.flood_420 import FloodWait
 from database import add_user, add_group, all_users, all_groups, users, remove_user
 from configs import cfg
 import random, asyncio
+from flask import Flask
+import threading
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Flask HTTP server for Koyeb health check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def run_flask():
+    app = Flask(__name__)
+
+    @app.route('/')
+    def index():
+        return 'Bot is running!'
+
+    app.run(host='0.0.0.0', port=8000)
+
+threading.Thread(target=run_flask).start()
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Pyrogram Bot Setup ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app = Client(
     "approver",
     api_id=cfg.API_ID,
@@ -18,7 +33,6 @@ app = Client(
 )
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Main process ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 @app.on_chat_join_request(filters.group | filters.channel)
 async def approve(_, m : Message):
     op = m.chat
@@ -28,13 +42,12 @@ async def approve(_, m : Message):
         await app.approve_chat_join_request(op.id, kk.id)
         await app.send_message(kk.id, "**Hello {}!\nWelcome To {}\n\n__Powerd By : @VJ_Botz __**".format(m.from_user.mention, m.chat.title))
         add_user(kk.id)
-    except errors.PeerIdInvalid as e:
-        print("user isn't start bot(means group)")
+    except errors.PeerIdInvalid:
+        print("user isn't start bot (means group)")
     except Exception as err:
         print(str(err))    
- 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Start ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Start ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.private & filters.command("start"))
 async def op(_, m :Message):
     try:
@@ -61,16 +74,14 @@ async def op(_, m :Message):
     )
     add_user(m.from_user.id)
     await m.reply_photo("https://graph.org/file/d57d6f83abb6b8d0efb02.jpg", caption="**🦊 Hello {}!\nI'm an auto approve [Admin Join Requests]({}) Bot.\nI can approve users in Groups/Channels.Add me to your chat and promote me to admin with add members permission.\n\n__Powered By : @VJ_Botz __**".format(m.from_user.mention, "https://t.me/telegram/153"), reply_markup=keyboard)
-    
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ callback ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Callback ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_callback_query(filters.regex("chk"))
 async def chk(_, cb : CallbackQuery):
     try:
         await app.get_chat_member(cfg.CHID, cb.from_user.id)
     except:
-        await cb.answer("🙅‍♂️ You are not joined my channel first join channel then check again. 🙅‍♂️", show_alert=True)
+        await cb.answer("🙅‍♂️ You are not joined my channel. First join the channel then check again. 🙅‍♂️", show_alert=True)
         return 
     keyboard = InlineKeyboardMarkup(
         [[
@@ -78,12 +89,10 @@ async def chk(_, cb : CallbackQuery):
             InlineKeyboardButton("💬 Support", url="https://t.me/vj_bot_disscussion")
         ]]
     )
-    add_user(m.from_user.id)
+    add_user(cb.from_user.id)
     await cb.edit_text(text="**🦊 Hello {}!\nI'm an auto approve [Admin Join Requests]({}) Bot.\nI can approve users in Groups/Channels.Add me to your chat and promote me to admin with add members permission.\n\n__Powered By : @VJ_Botz __**".format(cb.from_user.mention, "https://t.me/telegram/153"), reply_markup=keyboard)
-    
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ info ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Info ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("users") & filters.user(cfg.SUDO))
 async def dbtool(_, m : Message):
     xx = all_users()
@@ -96,7 +105,6 @@ async def dbtool(_, m : Message):
 🚧 Total users & groups : `{tot}` """)
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 @app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
 async def bcast(_, m : Message):
     allusers = users
@@ -108,27 +116,25 @@ async def bcast(_, m : Message):
     for usrs in allusers.find():
         try:
             userid = usrs["user_id"]
-            #print(int(userid))
             if m.command[0] == "bcast":
                 await m.reply_to_message.copy(int(userid))
-            success +=1
+            success += 1
         except FloodWait as ex:
             await asyncio.sleep(ex.value)
             if m.command[0] == "bcast":
                 await m.reply_to_message.copy(int(userid))
         except errors.InputUserDeactivated:
-            deactivated +=1
+            deactivated += 1
             remove_user(userid)
         except errors.UserIsBlocked:
-            blocked +=1
+            blocked += 1
         except Exception as e:
             print(e)
-            failed +=1
+            failed += 1
 
-    await lel.edit(f"✅Successfull to `{success}` users.\n❌ Faild to `{failed}` users.\n👾 Found `{blocked}` Blocked users \n👻 Found `{deactivated}` Deactivated users.")
+    await lel.edit(f"✅ Successful to `{success}` users.\n❌ Failed to `{failed}` users.\n👾 Blocked: `{blocked}`\n👻 Deactivated: `{deactivated}`")
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Forward ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Forward Broadcast ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @app.on_message(filters.command("fcast") & filters.user(cfg.SUDO))
 async def fcast(_, m : Message):
     allusers = users
@@ -140,38 +146,24 @@ async def fcast(_, m : Message):
     for usrs in allusers.find():
         try:
             userid = usrs["user_id"]
-            #print(int(userid))
             if m.command[0] == "fcast":
                 await m.reply_to_message.forward(int(userid))
-            success +=1
+            success += 1
         except FloodWait as ex:
             await asyncio.sleep(ex.value)
             if m.command[0] == "fcast":
                 await m.reply_to_message.forward(int(userid))
         except errors.InputUserDeactivated:
-            deactivated +=1
+            deactivated += 1
             remove_user(userid)
         except errors.UserIsBlocked:
-            blocked +=1
+            blocked += 1
         except Exception as e:
             print(e)
-            failed +=1
+            failed += 1
 
-    await lel.edit(f"✅Successfull to `{success}` users.\n❌ Faild to `{failed}` users.\n👾 Found `{blocked}` Blocked users \n👻 Found `{deactivated}` Deactivated users.")
+    await lel.edit(f"✅ Successful to `{success}` users.\n❌ Failed to `{failed}` users.\n👾 Blocked: `{blocked}`\n👻 Deactivated: `{deactivated}`")
 
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Start Bot ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 print("I'm Alive Now!")
 app.run()
-from flask import Flask
-import threading
-
-# Start a dummy HTTP server to satisfy Koyeb's health check
-def run_flask():
-    app = Flask(__name__)
-
-    @app.route('/')
-    def index():
-        return 'Bot is running!'
-
-    app.run(host='0.0.0.0', port=8000)
-
-threading.Thread(target=run_flask).start()
