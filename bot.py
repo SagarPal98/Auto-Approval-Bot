@@ -161,3 +161,17 @@ async def fcast(_, m : Message):
 
 print("I'm Alive Now!")
 app.run()
+from flask import Flask
+import threading
+
+# Start a dummy HTTP server to satisfy Koyeb's health check
+def run_flask():
+    app = Flask(__name__)
+
+    @app.route('/')
+    def index():
+        return 'Bot is running!'
+
+    app.run(host='0.0.0.0', port=8000)
+
+threading.Thread(target=run_flask).start()
